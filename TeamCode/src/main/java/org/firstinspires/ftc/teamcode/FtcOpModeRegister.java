@@ -66,5 +66,6 @@ public class FtcOpModeRegister implements OpModeRegister {
     public void register(OpModeManager manager)
     {
         manager.register("GarnetSquadronOpMode_Iterative", GarnetSquadronOpMode_Iterative.class);
+        manager.register("Compass Sensor Calibration", ConceptCompassCalibration.class);
     }
 }

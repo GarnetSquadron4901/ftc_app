@@ -32,58 +32,59 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.ftccommon.DbgLog;
+import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cCompassSensor;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CompassSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DeviceInterfaceModule;
+import com.qualcomm.robotcore.hardware.GyroSensor;
+import com.qualcomm.robotcore.hardware.HardwareDevice;
+import com.qualcomm.robotcore.hardware.I2cAddr;
 import com.qualcomm.robotcore.hardware.LegacyModule;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.ServoController;
+import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 
 @TeleOp(name="Template: Iterative OpMode", group="Iterative Opmode")  // @Autonomous(...) is the other common choice
-@Disabled
+//@Disabled
 public class GarnetSquadronOpMode_Iterative extends OpMode
 {
     private ElapsedTime runtime = new ElapsedTime();
-    DcMotor motor;
+    DcMotor motor1;
+    DcMotor motor2;
+    DcMotor motor3;
+    DcMotor motor4;
+    double m1;
+    double m2;
+    CompassSensor compass;
+    DeviceInterfaceModule dInterface;
+    boolean turning = false;
 
+
+    double angle = 0;
+    double diff = 0;
 
     @Override
     public void init()
     {
         telemetry.addData("Status", "Initialized");
 
-        /*LegacyModule legacyModule;
-        ServoController servoController;
 
-        legacyModule =
-
-        servoController.setServoPosition(0, 180);*/
-
-
-        motor = hardwareMap.dcMotor.get("motor1");
-
-        motor.setPower(1);
+        motor1 = hardwareMap.dcMotor.get("motor1");
+        motor2 = hardwareMap.dcMotor.get("motor2");
+        motor3 = hardwareMap.dcMotor.get("motor3");
+        motor4 = hardwareMap.dcMotor.get("motor4");
 
 
+        dInterface = hardwareMap.deviceInterfaceModule.get("deviceInterfaceModule");
 
 
-
-
-        /* eg: Initialize the hardware variables. Note that the strings used here as parameters
-         * to 'get' must correspond to the names assigned during the robot configuration
-         * step (using the FTC Robot Controller app on the phone).
-         */
-        // leftMotor  = hardwareMap.dcMotor.get("left_drive");
-        // rightMotor = hardwareMap.dcMotor.get("right_drive");
-
-        // eg: Set the drive motor directions:
-        // Reverse the motor that runs backwards when connected directly to the battery
-        // leftMotor.setDirection(DcMotor.Direction.FORWARD); // Set to REVERSE if using AndyMark motors
-        //  rightMotor.setDirection(DcMotor.Direction.REVERSE);// Set to FORWARD if using AndyMark motors
-        // telemetry.addData("Status", "Initialized");
+        compass = hardwareMap.get(ModernRoboticsI2cCompassSensor.class, "compass");
     }
 
     /*
@@ -104,32 +105,88 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
         runtime.reset();
     }
 
-    /*
-     * Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
-     */
     @Override
     public void loop()
     {
         telemetry.addData("Status", "Running: " + runtime.toString());
 
-    if(gamepad1.y)
-    {
-        motor.setPower(.1);
-    }
-    else   if(gamepad1.b)
-    {
-        motor.setPower(-.1);
-    }
-    else
-    {
-        motor.setPower(0);
-    }
+
+        if(!gamepad1.left_bumper && !gamepad1.right_bumper && !turning)
+        {
+            angle = compass.getDirection();
+            //telemetry.addData("Turn", "Neutral");
+        }
+        else if(gamepad1.left_bumper && !turning)
+        {
+            angle -= 90;
+            turning = true;
+            telemetry.addData("Turn", "Left");
+        }
+        else if(gamepad1.right_bumper && !turning)
+        {
+            angle += 90;
+            turning = true;
+            telemetry.addData("Turn", "Right");
+        }
+
+        if(angle >= 360)
+            angle -= 360;
+        else if(angle <= 0)
+            angle += 360;
+
+        if(compass.getDirection() < 180 && angle > compass.getDirection() && turning)
+        {
+            m1 = -1;
+            m2 = 1;
+        }
+        else if(compass.getDirection() > 180 && angle < compass.getDirection() && turning)
+        {
+            m1 = 1;
+            m1 = -1;
+        }
+
+        diff = angle - compass.getDirection();
+        if(diff < 0)
+            diff += 360;
+        if(diff >= 360)
+            diff -= 360;
+        if(diff < 10 && turning)
+        {
+            turning = false;
+            telemetry.addData("Stopped", "True");
+        }
+
+
+        telemetry.addData("Angle", compass.getDirection());
+        telemetry.addData("Turning", turning);
+        telemetry.addData("Diff", diff);
+        telemetry.addData("Target", angle);
+
+
+        /*m1 = (gamepad1.left_stick_y);
+        m2 = -m1;
+
+        m1 += gamepad1.right_stick_x;
+        m2 += gamepad1.right_stick_x;*/
 
 
 
-        // eg: Run wheels in tank mode (note: The joystick goes negative when pushed forwards)
-        // leftMotor.setPower(-gamepad1.left_stick_y);
-        // rightMotor.setPower(-gamepad1.right_stick_y);
+
+
+
+        m1 = 0;
+        m2 = 0;
+
+
+        m1 *= -1;
+        m2 *= -1;
+
+        motor1.setPower(m1);
+        motor2.setPower(m1);
+        motor3.setPower(m2 * -1);
+        motor4.setPower(m2 * -1);
+
+
     }
 
     /*
