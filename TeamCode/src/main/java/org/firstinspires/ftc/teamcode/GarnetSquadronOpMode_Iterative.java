@@ -58,7 +58,7 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
     DeviceInterfaceModule dInterface;
     boolean turning;
     //PID variables
-    double set, angle, error, KP, KI, KD, totalError, lastError, P, I, D, output, i_limit, o_limit;
+    PID pid;
 
     @Override
     public void init()
@@ -76,6 +76,7 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
         gyro = (ModernRoboticsI2cGyro)hardwareMap.gyroSensor.get("gyro");
 
         gyro.calibrate();
+
         turning = true;
 
         try
@@ -86,17 +87,6 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
         {
             telemetry.addData("Error", "could not calibrate gyro");
         }
-
-
-
-
-
-        set = 90;
-        i_limit = 1;
-        o_limit = 1;
-        KP = 0;
-        KI = 0;
-        KD = 0;
     }
 
 
@@ -105,27 +95,19 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
     public void init_loop(){}
      //Code to run ONCE when the driver hits PLAY
     @Override
-    public void start() {runtime.reset();}
+    public void start()
+    {
+        runtime.reset();
+
+        pid = new PID(.02, 0, .015, .18, -.18, 1, -1, 20);
+        pid.setPoint(90);
+    }
 
 
     @Override
     public void loop()
     {
-        telemetry.addData("Status", "Running: " + runtime.toString());
-
-        /*if(gyro.getIntegratedZValue() < 90 && turning)
-        {
-            m1 = -.2;
-            m2 = .2;
-        }
-
-        if(gyro.getIntegratedZValue() >= 90)
-        {
-            m1 = 0;
-            m2 = 0;
-
-            turning = false;
-        }*/
+        pid.setProcess(gyro.getIntegratedZValue());
 
 
         /*m1 = (gamepad1.right_stick_x);
@@ -134,47 +116,32 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
         m1 += gamepad1.left_stick_y;
         m2 += gamepad1.left_stick_y;*/
 
-        //PID programming
-        angle = gyro.getIntegratedZValue();
-        error = set - angle;
-        P = KP * error;
-        totalError += error;
-        I = KI * (error + totalError);
 
-        if(I > i_limit)
-            I = i_limit;
-        if(I < -i_limit)
-            I = -i_limit;
 
-        D = (error - lastError) * KD;
 
-        output = P + I + D;
 
-        if(output > o_limit)
-            output = o_limit;
-        else if (output < -o_limit)
-            output = -o_limit;
-        ///////////////////////////////////
+        m1 = pid.getOutput();
+        m2 = pid.getOutput();
 
-        m1 = -output;
-        m2 = output;
-
-        m1 *= -1;
-        m2 *= -1;
+        if(Math.abs(m1) < .05)
+            m1 = 0;
+        if(Math.abs(m2) < .05)
+            m2 = 0;
 
         motor1.setPower(m1);
         motor2.setPower(m1);
-        motor3.setPower(m2 * -1);
-        motor4.setPower(m2 * -1);
+        motor3.setPower(m2);
+        motor4.setPower(m2);
 
 
 
         telemetry.addData("Angle", gyro.getIntegratedZValue());
         telemetry.addData("m1", m1);
-        telemetry.addData("m2", m1);
-        telemetry.addData("P", P);
-        telemetry.addData("I", I);
-        telemetry.addData("D", D);
+        telemetry.addData("m2", m2);
+        telemetry.addData("P", pid.getP());
+        telemetry.addData("I", pid.getI());
+        telemetry.addData("D", pid.getD());
+        telemetry.addData("PID", pid.getOutput());
     }
 
     /*
