@@ -32,22 +32,14 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.ftccommon.DbgLog;
-import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cCompassSensor;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cGyro;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CompassSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DeviceInterfaceModule;
-import com.qualcomm.robotcore.hardware.GyroSensor;
-import com.qualcomm.robotcore.hardware.HardwareDevice;
-import com.qualcomm.robotcore.hardware.I2cAddr;
-import com.qualcomm.robotcore.hardware.LegacyModule;
-import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.ServoController;
-import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
+
 
 
 @TeleOp(name="Template: Iterative OpMode", group="Iterative Opmode")  // @Autonomous(...) is the other common choice
@@ -59,15 +51,14 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
     DcMotor motor2;
     DcMotor motor3;
     DcMotor motor4;
-    double m1;
-    double m2;
+    double m1 = 0;
+    double m2 = 0;
     CompassSensor compass;
+    ModernRoboticsI2cGyro gyro;
     DeviceInterfaceModule dInterface;
-    boolean turning = false;
-
-
-    double angle = 0;
-    double diff = 0;
+    boolean turning;
+    //PID variables
+    double set, angle, error, KP, KI, KD, totalError, lastError, P, I, D, output, i_limit, o_limit;
 
     @Override
     public void init()
@@ -82,101 +73,91 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
 
 
         dInterface = hardwareMap.deviceInterfaceModule.get("deviceInterfaceModule");
+        gyro = (ModernRoboticsI2cGyro)hardwareMap.gyroSensor.get("gyro");
+
+        gyro.calibrate();
+        turning = true;
+
+        try
+        {
+            Thread.sleep(3000);
+        }
+        catch(InterruptedException e)
+        {
+            telemetry.addData("Error", "could not calibrate gyro");
+        }
 
 
-        compass = hardwareMap.get(ModernRoboticsI2cCompassSensor.class, "compass");
+
+
+
+        set = 90;
+        i_limit = 1;
+        o_limit = 1;
+        KP = 0;
+        KI = 0;
+        KD = 0;
     }
 
-    /*
-     * Code to run REPEATEDLY after the driver hits INIT, but before they hit PLAY
-     */
+
+     //Code to run REPEATEDLY after the driver hits INIT, but before they hit PLAY
     @Override
-    public void init_loop()
-    {
-
-    }
-
-    /*
-     * Code to run ONCE when the driver hits PLAY
-     */
+    public void init_loop(){}
+     //Code to run ONCE when the driver hits PLAY
     @Override
-    public void start()
-    {
-        runtime.reset();
-    }
+    public void start() {runtime.reset();}
+
 
     @Override
     public void loop()
     {
         telemetry.addData("Status", "Running: " + runtime.toString());
 
-
-        if(!gamepad1.left_bumper && !gamepad1.right_bumper && !turning)
+        /*if(gyro.getIntegratedZValue() < 90 && turning)
         {
-            angle = compass.getDirection();
-            //telemetry.addData("Turn", "Neutral");
-        }
-        else if(gamepad1.left_bumper && !turning)
-        {
-            angle -= 90;
-            turning = true;
-            telemetry.addData("Turn", "Left");
-        }
-        else if(gamepad1.right_bumper && !turning)
-        {
-            angle += 90;
-            turning = true;
-            telemetry.addData("Turn", "Right");
+            m1 = -.2;
+            m2 = .2;
         }
 
-        if(angle >= 360)
-            angle -= 360;
-        else if(angle <= 0)
-            angle += 360;
+        if(gyro.getIntegratedZValue() >= 90)
+        {
+            m1 = 0;
+            m2 = 0;
 
-        if(compass.getDirection() < 180 && angle > compass.getDirection() && turning)
-        {
-            m1 = -1;
-            m2 = 1;
-        }
-        else if(compass.getDirection() > 180 && angle < compass.getDirection() && turning)
-        {
-            m1 = 1;
-            m1 = -1;
-        }
-
-        diff = angle - compass.getDirection();
-        if(diff < 0)
-            diff += 360;
-        if(diff >= 360)
-            diff -= 360;
-        if(diff < 10 && turning)
-        {
             turning = false;
-            telemetry.addData("Stopped", "True");
-        }
+        }*/
 
 
-        telemetry.addData("Angle", compass.getDirection());
-        telemetry.addData("Turning", turning);
-        telemetry.addData("Diff", diff);
-        telemetry.addData("Target", angle);
-
-
-        /*m1 = (gamepad1.left_stick_y);
+        /*m1 = (gamepad1.right_stick_x);
         m2 = -m1;
 
-        m1 += gamepad1.right_stick_x;
-        m2 += gamepad1.right_stick_x;*/
+        m1 += gamepad1.left_stick_y;
+        m2 += gamepad1.left_stick_y;*/
 
+        //PID programming
+        angle = gyro.getIntegratedZValue();
+        error = set - angle;
+        P = KP * error;
+        totalError += error;
+        I = KI * (error + totalError);
 
+        if(I > i_limit)
+            I = i_limit;
+        if(I < -i_limit)
+            I = -i_limit;
 
+        D = (error - lastError) * KD;
 
+        output = P + I + D;
 
+        if(output > o_limit)
+            output = o_limit;
+        else if (output < -o_limit)
+            output = -o_limit;
+        ///////////////////////////////////
 
-        m1 = 0;
-        m2 = 0;
-
+        m1 = -output;
+        m2 = output;
 
         m1 *= -1;
         m2 *= -1;
@@ -187,6 +168,13 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
         motor4.setPower(m2 * -1);
 
 
+
+        telemetry.addData("Angle", gyro.getIntegratedZValue());
+        telemetry.addData("m1", m1);
+        telemetry.addData("m2", m1);
+        telemetry.addData("P", P);
+        telemetry.addData("I", I);
+        telemetry.addData("D", D);
     }
 
     /*
