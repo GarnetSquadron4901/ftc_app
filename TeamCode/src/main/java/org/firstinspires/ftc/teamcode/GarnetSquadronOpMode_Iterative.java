@@ -37,6 +37,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CompassSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorController;
 import com.qualcomm.robotcore.hardware.DeviceInterfaceModule;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -57,8 +58,12 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
     ModernRoboticsI2cGyro gyro;
     DeviceInterfaceModule dInterface;
     boolean turning;
+
     //PID variables
     PID pid;
+    PID mp1;
+    PID mp2;
+
 
     @Override
     public void init()
@@ -87,6 +92,22 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
         {
             telemetry.addData("Error", "could not calibrate gyro");
         }
+
+        motor1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        motor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        motor3.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        motor4.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+
+        //       while(motor1.isBusy() || motor2.isBusy() || motor3.isBusy() || motor4.isBusy()){} //wait for encoders to reset
+        telemetry.addData("done", null);
+
+
+
+        motor1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        motor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        motor3.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        motor4.setMode(DcMotor.RunMode.RUN_TO_POSITION);
     }
 
 
@@ -94,6 +115,9 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
     @Override
     public void init_loop(){}
      //Code to run ONCE when the driver hits PLAY
+
+
+
     @Override
     public void start()
     {
@@ -101,14 +125,42 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
 
         pid = new PID(.02, 0, .015, .18, -.18, 1, -1, 20);
         pid.setPoint(90);
+
+        mp1  = new PID(.001, 10, 0, .18, -.18, 1, -1, 20);
+        mp1.setPoint(-1000);
+
+        mp2  = new PID(.001, 10, 0, .18, -.18, 1, -1, 20);
+        mp2.setPoint(1000);
     }
 
 
     @Override
     public void loop()
     {
+        motor1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        motor2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        motor3.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        motor4.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
         pid.setProcess(gyro.getIntegratedZValue());
 
+        telemetry.addData("Encoder1", motor1.getCurrentPosition());
+        telemetry.addData("Encoder2", motor2.getCurrentPosition());
+        telemetry.addData("Encoder3", motor3.getCurrentPosition());
+        telemetry.addData("Encoder4", motor4.getCurrentPosition());
+
+        mp1.setProcess(motor1.getCurrentPosition());
+        m1 = mp1.getOutput();
+
+        mp2.setProcess(motor3.getCurrentPosition());
+        m2 = mp2.getOutput();
+
+
+
+//        motor1.setTargetPosition(1000);
+//        motor2.setTargetPosition(1000);
+//        motor3.setTargetPosition(1000);
+//        motor4.setTargetPosition(1000);
 
         /*m1 = (gamepad1.right_stick_x);
         m2 = -m1;
@@ -120,13 +172,15 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
 
 
 
-        m1 = pid.getOutput();
+        /*m1 = pid.getOutput();
         m2 = pid.getOutput();
 
         if(Math.abs(m1) < .05)
             m1 = 0;
         if(Math.abs(m2) < .05)
-            m2 = 0;
+            m2 = 0;*/
+
+
 
         motor1.setPower(m1);
         motor2.setPower(m1);
@@ -138,10 +192,19 @@ public class GarnetSquadronOpMode_Iterative extends OpMode
         telemetry.addData("Angle", gyro.getIntegratedZValue());
         telemetry.addData("m1", m1);
         telemetry.addData("m2", m2);
-        telemetry.addData("P", pid.getP());
-        telemetry.addData("I", pid.getI());
-        telemetry.addData("D", pid.getD());
-        telemetry.addData("PID", pid.getOutput());
+        telemetry.addData("gP", pid.getP());
+        telemetry.addData("gI", pid.getI());
+        telemetry.addData("gD", pid.getD());
+        telemetry.addData("gPID", pid.getOutput());
+        telemetry.addData("EncLeftP", mp1.getP());
+        telemetry.addData("EncLeftI", mp1.getI());
+        telemetry.addData("EncLeftD", mp1.getD());
+        telemetry.addData("EncLeftPID", mp1.getOutput());
+        telemetry.addData("EncRightP", mp2.getP());
+        telemetry.addData("EncRightI", mp2.getI());
+        telemetry.addData("EncRightD", mp2.getD());
+        telemetry.addData("EncRightPID", mp2.getOutput());
+
     }
 
     /*

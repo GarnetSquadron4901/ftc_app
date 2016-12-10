@@ -1,11 +1,16 @@
 package org.firstinspires.ftc.teamcode;
 
+import java.util.Date;
+import java.util.Timer;
+
 
 public class PID
 {
     double imin, imax, omin, omax;
     protected double set, process, error, KP, KI, KD, totalError, lastError, P, I, D, output;
     protected long uPeriod;
+    Date date = new Date();
+    long now, lastTime;
 
     public PID(double KP, double KI, double KD, double imax, double imin, double omax, double omin, long uPeriod)
     {
@@ -23,6 +28,9 @@ public class PID
         this.I = 0;
         this.D = 0;
         this.output = 0;
+
+        this.now = 0;
+        this.lastTime =0;
 
         this.uPeriod = uPeriod;
 
@@ -64,23 +72,30 @@ public class PID
     {
         public synchronized void run()
         {
+            lastTime = date.getTime();
             while (true)
             {
                 try
                 {
+                    now = date.getTime();
+                    double timeChange = (double)(now - lastTime);
+
                     Thread.sleep(uPeriod);
 
                     error = set - process;
                     P = KP * error;
 
-                    totalError += error;
+                    totalError += error * timeChange;
                     I = KI * totalError;
                     if(I > imax)
                         I = imax;
                     if(I < imin)
                         I = imin;
 
-                    D = (error - lastError) * KD;
+                    if (timeChange != 0.0) {
+                        D = ((error - lastError) * KD) / timeChange;
+                    }
+                    D = 0;
 
                     output = P + I + D;
 
@@ -90,6 +105,8 @@ public class PID
                         output = omin;
 
                     lastError = error;
+
+                    lastTime = now;
                 }
                 catch (Exception e){System.out.println(e.toString());}
             }
