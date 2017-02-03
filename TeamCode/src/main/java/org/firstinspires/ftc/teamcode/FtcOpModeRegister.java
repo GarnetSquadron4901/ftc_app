@@ -66,6 +66,13 @@ public class FtcOpModeRegister implements OpModeRegister {
     public void register(OpModeManager manager)
     {
         manager.register("GarnetSquadronOpMode_Iterative", GarnetSquadronOpMode_Iterative.class);
-        manager.register("Compass Sensor Calibration", ConceptCompassCalibration.class);
+        manager.register("DoEverything", DoEverything.class);
+        manager.register("DoNothing", DoNothing.class);
+        manager.register("Ball", Shoot.class);
+        manager.register("Shoot", Shoot.class);
+        manager.register("Beacons", Beacons.class);
+        manager.register("BeaconsAndBall", BeaconsAndBall.class);
+        manager.register("ShootAndBall", ShootAndBall.class);
+        manager.register("ShootAndBeacons", ShootAndBeacons.class);
     }
 }

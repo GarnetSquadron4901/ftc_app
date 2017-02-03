@@ -11,6 +11,7 @@ public class PID
     protected long uPeriod;
     Date date = new Date();
     long now, lastTime;
+    double timeChange;
 
     public PID(double KP, double KI, double KD, double imax, double imin, double omax, double omin, long uPeriod)
     {
@@ -68,38 +69,48 @@ public class PID
         return D;
     }
 
+    public synchronized boolean finished()
+    {
+        if(Math.abs(process - set) <= set/20)
+            return true;
+
+        return false;
+    }
+
+
     class PIDThread extends Thread
     {
         public synchronized void run()
         {
-            lastTime = date.getTime();
+            lastTime = System.currentTimeMillis();
             while (true)
             {
                 try
                 {
-                    now = date.getTime();
-                    double timeChange = (double)(now - lastTime);
+                    now = System.currentTimeMillis();
+                    timeChange = (now - lastTime);
 
-                    Thread.sleep(uPeriod);
+                    //Thread.sleep(uPeriod);
 
                     error = set - process;
                     P = KP * error;
 
                     totalError += error * timeChange;
                     I = KI * totalError;
-                    if(I > imax)
+                    if (I > imax)
                         I = imax;
-                    if(I < imin)
+                    if (I < imin)
                         I = imin;
 
-                    if (timeChange != 0.0) {
+                    if (timeChange != 0.0)
+                    {
                         D = ((error - lastError) * KD) / timeChange;
                     }
                     D = 0;
 
                     output = P + I + D;
 
-                    if(output > omax)
+                    if (output > omax)
                         output = omax;
                     else if (output < omin)
                         output = omin;
@@ -108,7 +119,11 @@ public class PID
 
                     lastTime = now;
                 }
-                catch (Exception e){System.out.println(e.toString());}
+
+                catch (Exception e)
+                {
+                    System.out.println(e.toString());
+                }
             }
         }
     }
